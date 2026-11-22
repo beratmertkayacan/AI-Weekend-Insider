@@ -40,6 +40,14 @@ def delete_expense(expense_id: int) -> bool:
     return _expenses.pop(expense_id, None) is not None
 
 
+def update_expense(expense_id: int, data: ExpenseIn) -> Expense | None:
+    if expense_id not in _expenses:
+        return None
+    expense = Expense(id=expense_id, **data.model_dump())
+    _expenses[expense_id] = expense
+    return expense
+
+
 @app.get("/health")
 def read_health() -> HealthStatus:
     return HealthStatus(status="ok")
@@ -69,6 +77,15 @@ def read_expense(expense_id: int) -> Expense:
     expense = get_expense(expense_id)
     if expense is None:
         raise HTTPException(status_code=404, detail="Expense not found")
+    return expense
+
+
+@app.put("/expenses/{expense_id}")
+def replace_expense(expense_id: int, data: ExpenseIn) -> Expense:
+    expense = update_expense(expense_id, data)
+    if expense is None:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    logger.info("updated expense %s", expense_id)
     return expense
 
 
