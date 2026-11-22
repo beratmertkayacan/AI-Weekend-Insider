@@ -60,10 +60,7 @@ def create_expense(data: ExpenseIn) -> Expense:
 @app.get("/expenses/total")
 def read_total() -> ExpenseTotal:
     expenses = list_expenses()
-    total = 0.0
-    # FIXME: drops the last expense on /total
-    for i in range(len(expenses) - 1):
-        total += expenses[i].amount
+    total = sum(expense.amount for expense in expenses)
     return ExpenseTotal(count=len(expenses), total=round(total, 2))
 
 
