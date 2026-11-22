@@ -165,3 +165,92 @@ def test_update_expense_rejects_non_integer_id(client: TestClient) -> None:
     response = client.put("/expenses/abc", json={"description": "Pide", "amount": 180})
 
     assert response.status_code == 422
+
+
+def test_summary_empty_returns_empty_list(client: TestClient) -> None:
+    response = client.get("/expenses/summary")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_summary_is_not_treated_as_expense_id(client: TestClient) -> None:
+    response = client.get("/expenses/summary")
+
+    assert response.status_code != 422
+    assert response.status_code == 200
+
+
+def test_summary_groups_by_category(client: TestClient) -> None:
+    client.post("/expenses", json={"description": "Pide", "amount": 180, "category": "food"})
+    client.post("/expenses", json={"description": "Ayran", "amount": 20.5, "category": "food"})
+    client.post("/expenses", json={"description": "Ferry", "amount": 40, "category": "transport"})
+
+    response = client.get("/expenses/summary")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"category": "food", "count": 2, "total": 200.5},
+        {"category": "transport", "count": 1, "total": 40.0},
+    ]
+
+
+def test_summary_default_category_is_other(client: TestClient) -> None:
+    client.post("/expenses", json={"description": "Simit", "amount": 15})
+
+    response = client.get("/expenses/summary")
+
+    assert response.status_code == 200
+    assert response.json() == [{"category": "other", "count": 1, "total": 15.0}]
+
+
+def test_summary_sorted_by_category(client: TestClient) -> None:
+    client.post("/expenses", json={"description": "Ferry", "amount": 40, "category": "transport"})
+    client.post("/expenses", json={"description": "Pide", "amount": 180, "category": "food"})
+    client.post("/expenses", json={"description": "Simit", "amount": 15})
+
+    response = client.get("/expenses/summary")
+
+    assert response.status_code == 200
+    assert [row["category"] for row in response.json()] == ["food", "other", "transport"]
+
+
+def test_summary_rounds_total_to_two_decimals(client: TestClient) -> None:
+    client.post("/expenses", json={"description": "A", "amount": 0.1, "category": "food"})
+    client.post("/expenses", json={"description": "B", "amount": 0.2, "category": "food"})
+
+    response = client.get("/expenses/summary")
+
+    assert response.status_code == 200
+    assert response.json() == [{"category": "food", "count": 2, "total": 0.3}]
+
+
+def test_summary_omits_category_after_delete(client: TestClient) -> None:
+    food = client.post(
+        "/expenses", json={"description": "Pide", "amount": 180, "category": "food"}
+    ).json()
+    client.post("/expenses", json={"description": "Ferry", "amount": 40, "category": "transport"})
+
+    assert client.delete(f"/expenses/{food['id']}").status_code == 204
+
+    response = client.get("/expenses/summary")
+    assert response.status_code == 200
+    assert response.json() == [{"category": "transport", "count": 1, "total": 40.0}]
+
+
+def test_summary_reflects_update_of_category(client: TestClient) -> None:
+    created = client.post(
+        "/expenses", json={"description": "Pide", "amount": 180, "category": "food"}
+    ).json()
+
+    updated = client.put(
+        f"/expenses/{created['id']}",
+        json={"description": "Pide", "amount": 180, "category": "transport"},
+    )
+    assert updated.status_code == 200
+
+    response = client.get("/expenses/summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert all(row["category"] != "food" for row in body)
+    assert body == [{"category": "transport", "count": 1, "total": 180.0}]

@@ -16,5 +16,11 @@ class ExpenseTotal(BaseModel):
     total: float
 
 
+class CategorySummary(BaseModel):
+    category: str
+    count: int
+    total: float
+
+
 class HealthStatus(BaseModel):
     status: str
