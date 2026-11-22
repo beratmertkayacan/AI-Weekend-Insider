@@ -1,217 +1,216 @@
-# claude-starter-kit
+# AI Weekend Insider
 
-AI Weekend 201 · Day 2 · Claude Code hands-on starter.
-[Türkçe](#türkçe) · [English](#english)
+AI Weekend 201 atölyesi
 
-```bash
-git clone https://github.com/AI-Weekend/claude-starter-kit && cd claude-starter-kit && claude
+| Gün        | Konu                                                                  | Klasör                               |
+| ---------- | --------------------------------------------------------------------- | ------------------------------------ |
+| **1. gün** | Langflow ile adım adım bir yapay zeka asistanı kurmak                 | [`langflow-demos/`](langflow-demos/) |
+| **2. gün** | Claude Code: CLAUDE.md, hook, skill, MCP, alt-ajanlar ve orkestrasyon | Deponun geri kalanı                  |
+
+Ortak fikir iki günde de aynı: bir modeli tek başına kullanmak yerine onu **katmanlarla** güçlendirmek.
+
+1. günde bu katmanlar bir Langflow üzerinde pipeline olarak duruyor; 2. günde bir kod deposunda dosyalar olarak.
+
+---
+
+## Klasör yapısı
+
 ```
-
-```
-claude-starter-kit/
-├── CLAUDE.md                     run · test · don't-touch
-├── .claude/
-│   ├── skills/house-review/      review skill (loads on its own)
-│   ├── skills/changelog/         /changelog <n> command
-│   ├── hooks/protect-secrets.sh  PreToolUse: blocks .env / secrets
-│   ├── hooks/verify-on-stop.sh   Stop: runs the tests if .py files changed
-│   ├── agents/storage-scout.md   read-only subagent (haiku)
-│   └── settings.json             hook wiring
-├── .mcp.json                     filesystem → ~/notes (github: Session 04)
-├── .env.example                  GITHUB_PAT placeholder — copy to .env
-├── app/                          expense-api (FastAPI): main.py, models.py
-├── tests/                        pytest
-└── sample-notes/recipes/         14 recipes for the MCP filesystem demo
+.
+├── README.md                      bu dosya
+├── CLAUDE.md                      Claude'a proje kuralları (komutlar, kod kuralları, yasak dosyalar)
+│
+├── langflow-demos/                1. GÜN: Langflow akışları
+│   ├── README.md                  kurulum ve oturum rehberi (atölyenin orijinali)
+│   ├── mutfak/  hafta-sonu/       4 senaryo, her birinde 6 oturumluk akış (01-temel … 06-izleme)
+│   ├── finans/  seyahat/          + kopyala-yapistir.md (hazır prompt ve kurallar)
+│   └── assets/                    sentetik girdi verisi (PDF, CSV, notlar)
+│
+├── app/                           2. GÜN: expense-api (FastAPI)
+│   ├── main.py                    endpoint'ler ve bellek içi saklama
+│   └── models.py                  veri şekilleri
+├── tests/                         pytest testleri (27 test)
+│
+├── .claude/                       2. GÜN: Claude Code kiti
+│   ├── settings.json              hook'ları olaylara bağlar
+│   ├── hooks/                     protect-secrets.sh, verify-on-stop.sh
+│   ├── skills/                    house-review, changelog, pipeline, team
+│   └── agents/                    storage-scout, planner, fixer, test-writer, verifier, reviewer
+├── .mcp.json                      projeye bağlı MCP sunucuları (filesystem, github)
+│
+├── sample-notes/recipes/          filesystem MCP alıştırması için 14 tarif
+├── pyproject.toml, uv.lock        Python bağımlılıkları
+└── .env.example                   gizli anahtar şablonu (gerçek .env git'e girmez)
 ```
 
 ---
 
-## Türkçe
+## 1. gün: Langflow
 
-**Bu nedir?** Day 2 oturumlarında (02–05) kullandığımız örnek proje. İçinde küçük bir FastAPI
-uygulaması (**expense-api**) ve hazır kurulmuş bir Claude Code kiti var: `CLAUDE.md`, iki skill,
-iki hook, bir subagent ve `.mcp.json`. Hiçbir şeyi sıfırdan yazmıyorsunuz.
+[Langflow](https://www.langflow.org), yapay zekâ uygulamalarını kod yazmadan, kutuları birbirine bağlayarak kurmaya
+yarayan görsel bir araç. Atölyede altı oturumda **tek bir asistanı katman katman** büyüttük:
 
-Uygulamada **bilerek bırakılmış** kusurlar var. Bunlar alıştırmaların konusu:
+> **düşün → yönlendir → hatırla → araç kullan → yayınla → izle**
 
-- `/health` endpoint'i yok (`app/main.py` içindeki TODO).
-- `/expenses/total` son harcamayı atlıyor (FIXME). `test_total_sums_all_expenses` bu yüzden
-  kırmızı. `uv run pytest -q` → `1 failed, 5 passed`.
-- Storage fonksiyonları `app/main.py` içinde. `app/storage.py`'ye taşımak refactor alıştırması.
+| Oturum | Eklenen katman | Ne öğrendim |
+|---|---|---|
+| `01-temel` | Düşünce zinciri (chain-of-thought) prompt'u | Modelden cevaptan önce adım adım düşünmesini istemek, sonucu daha tutarlı yapıyor. |
+| `02-akis` | Smart Router + uzman ajanlar | Soruyu önce sınıflandırıp doğru "uzmana" göndermek; tek dev prompt yerine küçük, odaklı parçalar. |
+| `03-hafiza` | Bilgi tabanı (RAG) + sohbet hafızası | Model kendi bilmediğini belgelerden çekiyor (embedding ile), sohbet içinde söylenenleri hatırlıyor. |
+| `04-araclar` | Web arama, hesap makinesi, filesystem MCP | Ajan dış araçları çağırabiliyor; MCP ile bir klasördeki notları okuyup yeni dosya yazabiliyor. |
+| `05-yayin` | API uç noktası + yerel Ollama modeli | Akışı bir API olarak dışarı açmak; küçük yerel model (`llama3.2:3b`) daha yavaş ve daha hatalı. |
+| `06-izleme` | LLM-as-judge (hakem model) + Traces | Bir modelin cevabını başka bir modele puanlatmak; her çalışmanın süresini, token'ını ve adımlarını izlemek. |
 
-### Gereksinimler
+Dört senaryo aynı altı katmanı farklı bir günlük problem üzerinde öğretiyor:
 
-| Araç | Neden | Kurulum |
-| --- | --- | --- |
-| Claude Code | Ana araç. Pro, Max, Team, Enterprise veya Console hesabı gerekir. | `curl -fsSL https://claude.ai/install.sh \| bash` · [docs](https://code.claude.com/docs) |
-| uv | Python 3.12 ve bağımlılıklar | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| jq | Hook script'leri JSON girdiyi jq ile okur | `brew install jq` · `sudo apt install jq` |
-| Node.js 18+ | MCP sunucuları `npx` ile başlar | [nodejs.org](https://nodejs.org) |
-| git, gh (ops.) | Session 04–05'te PR | `brew install gh` · `gh auth login` |
+| Senaryo | Klasör | Asistan ne yapıyor |
+|---|---|---|
+| **Mutfak** (ana) | `mutfak/` | Evdekilerle ne pişirilir, alışveriş listesi, aile alerjileri |
+| **Hafta sonu** | `hafta-sonu/` | İzmir'de hafta sonu planı: mekân, hava, ulaşım, tercihler |
+| **Finans** | `finans/` | Harcama CSV'sini bütçe hedefleriyle karşılaştıran koç |
+| **Seyahat** | `seyahat/` | Lizbon gezisi: günlük plan, vize ve belge kontrolü |
 
-Windows'ta WSL kullanın.
+**Çalıştırmak için:** Langflow Desktop 1.13.0 kurup bir senaryonun `0N-….json` dosyasını *Upload a flow* ile
+yükleyin, tuvaldeki sarı Note'u izleyin. Ayrıntılı kurulum (API anahtarları, Ollama, bilgi tabanı, MCP sunucusu):
+[`langflow-demos/README.md`](langflow-demos/README.md).
 
-### Kurulum (bir kere)
-
-```bash
-git clone https://github.com/AI-Weekend/claude-starter-kit && cd claude-starter-kit
-uv run pytest -q                                     # 1 failed, 5 passed — beklenen durum
-mkdir -p ~/notes && cp -R sample-notes/recipes ~/notes/   # filesystem MCP ~/notes klasörünü okur
-cp .env.example .env                                 # Session 04'te GITHUB_PAT'i siz doldurun
-claude                                               # klasöre güvenin, filesystem sunucusunu onaylayın
-```
-
-Her oturuma temiz bir dalla başlayın. Böylece bir oturumdaki düzeltme diğerinin alıştırmasını bozmaz:
-`git switch main && git switch -c session-03`. Önceki işinizi önce commit edin ya da silin.
-
-### Oturumlar
-
-**Session 02 — Claude Code'a giriş**
-1. `> explain this project in 5 bullets`
-2. `> add a /health endpoint and a test` → Claude okur, düzenler, `uv run pytest -q` çalıştırır.
-3. Shift+Tab ile izin modlarını gezin. `/memory` ile `CLAUDE.md`'yi açın. `Esc Esc` veya `/rewind` deneyin.
-
-Not: Stop hook'u `.py` dosyaları değiştiğinde testleri çalıştırır ve önceden kırık olan
-`test_total_sums_all_expenses` testini Claude'a geri yollar. Bu Session 04'ün hatası.
-"Leave that test for now" deyin ya da Esc'ye basın.
-
-**Session 03 — Skill'ler, komutlar, hook'lar**
-1. `/changelog 20` → git log'dan sürüm notu.
-2. Küçük bir değişiklik yapıp `git add` ile stage edin, sonra `> review my staged changes`.
-   `house-review` skill'i kendiliğinden yüklenir.
-3. `> test the hook: add a line to .env` → `protect-secrets.sh` engeller (exit 2). Bash yolu da
-   engellenir. Sadece "add a line to .env" derseniz Claude `CLAUDE.md` yüzünden baştan reddedebilir.
-4. `.claude/skills/house-review/SKILL.md` dosyasına bir kural ekleyin. `/hooks` ile hook'lara bakın.
-
-**Session 04 — MCP**
-1. `/mcp` → `filesystem` bağlı olmalı.
-2. `> plan 5 dinners from ~/notes/recipes and write a shopping list`
-3. GitHub ve Playwright sunucularını ekleyin. Token `.mcp.json`'a yazılmaz; `${GITHUB_PAT}` olarak kalır.
-   ```bash
-   set -a; source .env; set +a      # GITHUB_PAT'i shell'e aktarır
-   claude mcp add --scope project --transport http github https://api.githubcopilot.com/mcp/ \
-     --header 'Authorization: Bearer ${GITHUB_PAT}'
-   claude mcp add --scope project playwright -- npx -y @playwright/mcp@latest
-   ```
-4. Kendi kopyanızda bir PR açın ([PR kurulumu](#pr-kurulumu--pr-setup)), sonra:
-   `> Reproduce the failing test in expense-api, fix the /expenses/total bug in app/main.py, then comment the fix on the PR.`
-   Beklenen iz: github → Read / Edit / Bash → github.
-
-**Session 05 — Agent'lar iş başında**
-Plan modunda başlayın (`claude --permission-mode plan` ya da Shift+Tab) ve birini seçin:
-- **Tur:** `> use the storage-scout subagent to summarize how expenses are stored`. Sonra README ile
-  `app/`'i okuyup TODO/FIXME'leri listeletin.
-- **/health → PR:** endpoint + test + `gh pr create`.
-- **Bug hunt:** `uv run pytest -k test_total_sums_all_expenses` ile başlayın. `git log app/main.py`
-  ile hatayı getiren commit'i bulun. Önce hipotezi yazdırın, sonra yamalayın.
-- **Refactor:** storage'ı `app/main.py`'den `app/storage.py`'ye taşıyın. Sırayla: fonksiyonlar,
-  çağrı yerleri, testler.
+> API anahtarları akış dosyalarında **yok**; Langflow'un *Global Variables* ayarında tutuluyor. Bu klasöre
+> anahtar eklemeyin. `assets/` altındaki bütün veriler sentetiktir.
 
 ---
 
-## English
+## 2. gün: Claude Code
 
-**What is this?** The sample project for Day 2 sessions 02–05. It holds a small FastAPI app
-(**expense-api**) and a pre-wired Claude Code kit: `CLAUDE.md`, two skills, two hooks, a
-subagent and `.mcp.json`. You don't author anything from scratch.
+2. günde küçük bir API projesi üzerinde Claude Code'un dört yapı taşını kurup kullandım, sonra bunları birbirine bağlayan bir sub-agent ekibi tasarlandı.
 
-The app has **deliberate** warts. The exercises are about them:
+### Uygulama: expense-api
 
-- There is no `/health` endpoint (TODO in `app/main.py`).
-- `/expenses/total` drops the last expense (FIXME), so `test_total_sums_all_expenses` is red.
-  `uv run pytest -q` → `1 failed, 5 passed`.
-- The storage functions live in `app/main.py`. Moving them to `app/storage.py` is the refactor
-  exercise.
+Harcamaları kaydeden küçük bir FastAPI uygulaması. Veriler bellekte tutulur, uygulama kapanınca silinir.
 
-### Prerequisites
+| İstek | Ne yapar | Durum |
+|---|---|---|
+| `GET /health` | Sunucu ayakta mı | Eklendi |
+| `GET /expenses` | Harcamaları listeler (`?category=` ile filtre) | Hazırdı |
+| `POST /expenses` | Harcama ekler | Hazırdı |
+| `GET /expenses/total` | Adet ve toplam | Hatası düzeltildi |
+| `GET /expenses/summary` | Kategori başına adet ve toplam | Eklendi (alt-ajan ekibiyle) |
+| `GET /expenses/{id}` | Tek harcama | Hazırdı |
+| `PUT /expenses/{id}` | Harcamayı günceller | Eklendi (alt-ajan ekibiyle) |
+| `DELETE /expenses/{id}` | Harcamayı siler | Hazırdı |
 
-| Tool | Why | Install |
-| --- | --- | --- |
-| Claude Code | The agent. Needs a Pro, Max, Team, Enterprise or Console account. | `curl -fsSL https://claude.ai/install.sh \| bash` · [docs](https://code.claude.com/docs) |
-| uv | Python 3.12 and dependencies | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| jq | The hook scripts parse their JSON input with jq | `brew install jq` · `sudo apt install jq` |
-| Node.js 18+ | MCP servers start through `npx` | [nodejs.org](https://nodejs.org) |
-| git, gh (optional) | PRs in Sessions 04–05 | `brew install gh` · `gh auth login` |
+- [x] `/health` endpoint'i yoktu.
+- [x] `/expenses/total` son harcamayı atlıyordu: `range(len(expenses) - 1)` yerine `sum(...)`.
+- [x] Saklama fonksiyonları `app/main.py` içinde; `app/storage.py` dosyasına taşındı
 
-On Windows, use WSL.
+### Dört yapı taşı
 
-### Setup (once)
+| Kavram | Tek cümleyle | Bu depoda | Garantili mi |
+|---|---|---|---|
+| **CLAUDE.md** | Claude'un her oturumda okuduğu kurallar | `CLAUDE.md` | Hayır, rica düzeyinde |
+| **Hook** | Belirli bir anda otomatik çalışan script | `.claude/hooks/` | Evet, Claude atlayamaz |
+| **Skill** | Hazır görev tarifi, çoğu zaman bir `/komut` | `.claude/skills/` | Çağrılınca uygulanır |
+| **MCP** | Claude'u dış araçlara bağlayan köprü | `.mcp.json` | Bağlantıya bağlı |
 
-```bash
-git clone https://github.com/AI-Weekend/claude-starter-kit && cd claude-starter-kit
-uv run pytest -q                                     # 1 failed, 5 passed — expected
-mkdir -p ~/notes && cp -R sample-notes/recipes ~/notes/   # the filesystem MCP server reads ~/notes
-cp .env.example .env                                 # fill in GITHUB_PAT yourself in Session 04
-claude                                               # trust the folder, approve the filesystem server
+**Hook'lar**
+
+- `protect-secrets.sh` (PreToolUse): Claude bir dosyayı okumadan, düzenlemeden ya da komut çalıştırmadan önce
+devreye girer; yolda `.env` ya da `secrets` geçiyorsa işlemi durdurur. Başta okuma aracı kapsam dışıydı,
+`settings.json` eşleştiricisine `Read` eklenerek kapatıldı.
+- `verify-on-stop.sh` (Stop): Claude cevabını bitirirken `.py` dosyaları değiştiyse testleri çalıştırır,
+kırmızıysa Claude'u durdurmaz, hatayı geri yollar. `git`, `jq` ve `uv` gerektirir.
+
+**Skill'ler**
+
+| Komut | Ne yapar |
+|---|---|
+| (kendiliğinden) `house-review` | Kod incelemesi istenince yüklenir: risk yüzeyi, `dosya:satır`, ship / hold kararı |
+| `/changelog 20` | Son 20 commit'ten sürüm notu |
+| `/pipeline <görev>` | Sıralı ekip: verifier → fixer → verifier → reviewer |
+| `/team <görev>` | Dallanan ekip: planner → (fixer ∥ test-writer) → verifier → reviewer |
+
+**MCP sunucuları**
+
+| Sunucu | Ne sağlar | Nerede tanımlı |
+|---|---|---|
+| filesystem | `~/notes` klasörünü okuma/yazma | `.mcp.json` |
+| github | Depo, issue, PR işlemleri (`GITHUB_PAT` gerekir) | `.mcp.json` |
+| notion | Notion sayfaları | Kullanıcı ayarı, depoda yok |
+
+Token'lar `.mcp.json` içine yazılmaz; dosyada `${GITHUB_PAT}` yer tutucusu durur, değer `.env` dosyasından gelir.
+
+### Alt-ajan ekibi
+
+Altı alt-ajan var. Her birinin araçları rolüne göre kısıtlı; biri yalnızca okur, biri yalnızca test yazar.
+
+| Ajan | Görevi | Yazabilir mi | Model |
+|---|---|---|---|
+| `storage-scout` | Saklama katmanını 3 maddede özetler | Hayır | haiku |
+| `planner` | Görevi kesin bir sözleşmeye ve iki ayrı görev tarifine çevirir | Hayır | sonnet |
+| `fixer` | Kodu yazar ya da düzeltir (`app/`) | Evet | sonnet |
+| `test-writer` | Sözleşmeden test yazar, koda bakmadan (`tests/`) | Evet | sonnet |
+| `verifier` | `pytest` + `ruff` çalıştırır, teşhis raporu döndürür | Hayır | haiku |
+| `reviewer` | Değişikliği bağımsız inceler, karar verir | Hayır | sonnet |
+
+`/team` **akışı:**
+
+```
+SİZ ── görev ──► ANA OTURUM (orkestra şefi)
+                    │
+ 1 (aynı anda)      ├─► planner ──► sözleşme + kod tarifi + test tarifi
+                    └─► verifier ─► başlangıç yeşil mi?
+                    │
+ 2 (aynı anda)      ├─► fixer ◄──── sözleşme + kod tarifi    → app/
+                    └─► test-writer ◄ sözleşme + test tarifi → tests/
+                    │
+ 3                  └─► verifier ─► ikisi uyuşuyor mu?  ── kırmızı ─► onarım turu
+ 4                  └─► reviewer ─► ship / ship with nits / hold ── hold ─► onarım turu
+                    │
+ bitiş              └─► rapor + durum panosu ──► SİZ (commit onayı)
 ```
 
-Start each session on a fresh branch, so a fix from one session doesn't spoil the next exercise:
-`git switch main && git switch -c session-03`. Commit or discard your previous work first.
+Tasarım kuralları:
 
-### Sessions
+- **Alt-ajanlar birbirine yazamaz.** Her aktarımı ana oturum yapar ve metni değiştirmeden geçirir; bu yüzden her
+ajan sabit bir blok döndürür (`AGENT / STATUS / FINDINGS / NEXT`).
+- **Paralel dallar aynı dosyaya yazmaz.** `fixer` yalnızca `app/`, `test-writer` yalnızca `tests/` altında çalışır.
+- **En fazla 2 tur.** Paralel yapım + bir onarım; sonrasında hâlâ sorun varsa akış "hold" ile durur.
+- **Onaysız commit yok, push hiç yok.**
 
-**Session 02 — Claude Code intro**
-1. `> explain this project in 5 bullets`
-2. `> add a /health endpoint and a test` → Claude reads, edits and runs `uv run pytest -q`.
-3. Cycle permission modes with Shift+Tab. Open `CLAUDE.md` with `/memory`. Try `Esc Esc` or `/rewind`.
+**Gerçek çalıştırmalar:**
 
-Note: the Stop hook runs the tests when `.py` files changed. It sends the already-red
-`test_total_sums_all_expenses` back to Claude. That's the Session 04 bug: say
-"leave that test for now" or press Esc.
+| İş | Ajan çalışması | Tur | Sonuç |
+|---|---|---|---|
+| `PUT /expenses/{id}` | 9 | 2/2 (eksik 422 testleri onarım turunda eklendi) | ship with nits |
+| `GET /expenses/summary` | 6 | 1/2 | ship |
 
-**Session 03 — Skills, commands, hooks**
-1. `/changelog 20` → release notes from git log.
-2. Make a small change, `git add` it, then `> review my staged changes`. The `house-review`
-   skill loads on its own.
-3. `> test the hook: add a line to .env` → `protect-secrets.sh` blocks it (exit 2). The Bash route
-   is blocked too. A plain "add a line to .env" may be refused up front because of `CLAUDE.md`.
-4. Add one house rule to `.claude/skills/house-review/SKILL.md`. Browse the hooks with `/hooks`.
+İkisinde de kod ve testler birbirini görmeden aynı sözleşmeden yazıldı ve ilk karşılaşmada uyuştu.
 
-**Session 04 — MCP**
-1. `/mcp` → `filesystem` should be connected.
-2. `> plan 5 dinners from ~/notes/recipes and write a shopping list`
-3. Add the GitHub and Playwright servers. The token never lands in `.mcp.json`; it stays `${GITHUB_PAT}`.
-   ```bash
-   set -a; source .env; set +a      # export GITHUB_PAT into this shell
-   claude mcp add --scope project --transport http github https://api.githubcopilot.com/mcp/ \
-     --header 'Authorization: Bearer ${GITHUB_PAT}'
-   claude mcp add --scope project playwright -- npx -y @playwright/mcp@latest
-   ```
-4. Open a PR on your own copy ([PR setup](#pr-kurulumu--pr-setup)), then:
-   `> Reproduce the failing test in expense-api, fix the /expenses/total bug in app/main.py, then comment the fix on the PR.`
-   Expected trace: github → Read / Edit / Bash → github.
-
-**Session 05 — Agents on play**
-Start in plan mode (`claude --permission-mode plan` or Shift+Tab) and pick one:
-- **Tour:** `> use the storage-scout subagent to summarize how expenses are stored`. Then have it
-  read the README and `app/` and list the TODO/FIXME warts.
-- **/health → PR:** endpoint + test + `gh pr create`.
-- **Bug hunt:** start with `uv run pytest -k test_total_sums_all_expenses`. Find the commit that
-  broke it with `git log app/main.py`. Make it state a hypothesis before it patches.
-- **Refactor:** move storage from `app/main.py` to `app/storage.py`. Batch it: functions, then call
-  sites, then tests.
+**Raporlar:** Her çalıştırma `reports/` altına bir rapor yazar ve `reports/STATUS.md` durum panosunu günceller
+(son iş, sonuç, benden beklenen karar, sıradaki tek adım). Bu klasör `.gitignore` içinde, yalnızca yerelde durur.
 
 ---
 
-## PR kurulumu · PR setup
+## Kurulum ve komutlar
 
-The GitHub server needs a repo you can write to. Push the starter to your own account and open a
-PR for Claude to read and reply on:
-
-```bash
-gh repo create claude-starter-kit --private --source=. --remote=mine --push
-gh repo set-default "$(gh api user -q .login)/claude-starter-kit"
-git switch -c fix-total && git commit --allow-empty -m "Fix /expenses/total" && git push -u mine fix-total
-gh pr create --title "Fix /expenses/total" \
-  --body "test_total_sums_all_expenses fails — /expenses/total is short by one item"
-```
-
-Use a fine-grained token scoped to that repo, with read/write on Contents, Issues and Pull requests.
-
-## Commands
+**Gereksinimler:** [uv](https://docs.astral.sh/uv/) (Python 3.12 ve bağımlılıklar), `jq` (hook'lar için),
+Node.js 18+ (MCP sunucuları için), Claude Code. 1. gün için ayrıca Langflow Desktop 1.13.0 ve Ollama.
 
 ```bash
-uv run uvicorn app.main:app --reload   # http://127.0.0.1:8000/docs
-uv run pytest -q
-uv run ruff check .
+uv run pytest -q                                   # testler: 27 passed beklenir
+uv run ruff check .                                # kod kuralları
+uv run uvicorn app.main:app --reload               # API: http://127.0.0.1:8000/docs
+mkdir -p ~/notes && cp -R sample-notes/recipes ~/notes/   # filesystem MCP'nin okuyacağı klasör
+cp .env.example .env                               # sonra GITHUB_PAT değerini kendiniz yazın
+claude                                             # Claude Code'u başlatır
 ```
+
+Claude Code içinde:
+
+```
+/team <ne eklenecek, ne dönecek, hata durumunda ne olacak>
+/pipeline <küçük bir görev>
+/changelog 10
+/agents     /hooks     /mcp
+```
+
+---
