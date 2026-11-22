@@ -42,15 +42,34 @@ There are at most **2 rounds** (2 fixer runs) per pipeline run.
 1. Write the report to `reports/pipeline/<YYYY-MM-DD-HHMM>-<short-task-slug>.md`
    using the template below. Write it in Turkish. List every agent run in the
    order it happened, including runs that failed.
-2. Tell the user, in Turkish: the joint outcome, what changed and why, any nits,
-   and what you need them to decide. Link the report file.
-3. **Stop and wait.** Do not commit until the user approves. Never push or merge.
+2. Update the status board `reports/STATUS.md` (create it from the layout of the
+   existing one if it is missing). It must stay readable at a glance:
+   - Rewrite the "Şu an" table for this run and set the heading colour:
+     🟢 done, 🟡 waiting for the user's decision, 🔴 hold.
+   - "Sıradaki tek adım" names exactly one next action.
+   - Update "Bekleyen kararlar" and "Açık işler" (tick or remove what is done).
+   - Add this run as the first row of "Son çalıştırmalar" with a link to the
+     report. Keep the 10 newest rows.
+3. Tell the user, in Turkish: the joint outcome, what changed and why, any nits,
+   and what you need them to decide. Link the report file and the status board.
+4. **Stop and wait.** Do not commit until the user approves. Never push or merge.
    When you do commit, follow the commit rules in the user's CLAUDE.md.
+5. Whenever the user decides something or you commit after the report was
+   written, update both the report and the status board so they stay true.
 
 ## Report template
 
 ```markdown
 # Pipeline raporu: <görev>
+
+## 30 saniyede
+
+- <✅ / 🟡 / 🔴> **Sonuç:** <ortak karar; commit varsa kısa kodu>
+- **Ne değişti:** <bir cümle>
+- **Kanıt:** <test ve lint sonucu, kim çalıştırdı>
+- **Benden beklenen:** <kullanıcının vermesi gereken karar, ya da "Yok">
+
+---
 
 - **Tarih:** <YYYY-MM-DD HH:MM>
 - **Ortak karar:** ship | ship with nits | hold
@@ -74,7 +93,15 @@ There are at most **2 rounds** (2 fixer runs) per pipeline run.
 
 <Verifier ve reviewer sonuçlarını birleştiren 2-4 cümle.>
 
-## Kullanıcıdan beklenen kararlar
+## Aktarımlar (kimden kime ne geçti)
 
-- <örn. commit atılsın mı, nit'ler düzeltilsin mi>
+| Kimden | Kime | Ne aktarıldı |
+|--------|------|--------------|
+| verifier | fixer | Başlangıç raporu |
+
+## Kullanıcı kararları
+
+| Zaman | Soru | Karar |
+|-------|------|-------|
+| <hangi aşamadan sonra> | <soru> | <bekliyor / kullanıcının cevabı> |
 ```

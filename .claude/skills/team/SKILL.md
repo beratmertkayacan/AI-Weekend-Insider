@@ -59,15 +59,34 @@ There are at most **2 rounds** per run: the parallel build, then one repair.
 1. Write the report to `reports/team/<YYYY-MM-DD-HHMM>-<short-task-slug>.md` using
    the template below. Write it in Turkish. List every agent run in the order it
    happened, including failed runs, and mark which runs were parallel.
-2. Tell the user, in Turkish: the joint outcome, what changed and why, any nits,
-   and what you need them to decide. Link the report file.
-3. **Stop and wait.** Do not commit until the user approves. Never push or merge.
+2. Update the status board `reports/STATUS.md` (create it from the layout of the
+   existing one if it is missing). It must stay readable at a glance:
+   - Rewrite the "Şu an" table for this run and set the heading colour:
+     🟢 done, 🟡 waiting for the user's decision, 🔴 hold.
+   - "Sıradaki tek adım" names exactly one next action.
+   - Update "Bekleyen kararlar" and "Açık işler" (tick or remove what is done).
+   - Add this run as the first row of "Son çalıştırmalar" with a link to the
+     report. Keep the 10 newest rows.
+3. Tell the user, in Turkish: the joint outcome, what changed and why, any nits,
+   and what you need them to decide. Link the report file and the status board.
+4. **Stop and wait.** Do not commit until the user approves. Never push or merge.
    When you do commit, follow the commit rules in the user's CLAUDE.md.
+5. Whenever the user decides something or you commit after the report was
+   written, update both the report and the status board so they stay true.
 
 ## Report template
 
 ```markdown
 # Team raporu: <görev>
+
+## 30 saniyede
+
+- <✅ / 🟡 / 🔴> **Sonuç:** <ortak karar; commit varsa kısa kodu>
+- **Ne eklendi:** <bir cümle>
+- **Kanıt:** <test ve lint sonucu, kim çalıştırdı>
+- **Benden beklenen:** <kullanıcının vermesi gereken karar, ya da "Yok">
+
+---
 
 - **Tarih:** <YYYY-MM-DD HH:MM>
 - **Ortak karar:** ship | ship with nits | hold
@@ -76,6 +95,12 @@ There are at most **2 rounds** per run: the parallel build, then one repair.
 ## Ağaç
 
 <Koşan ajanları dallanmayı gösterecek şekilde çiz; her birinin yanına sonucunu yaz.>
+
+## Aktarımlar (kimden kime ne geçti)
+
+| Kimden | Kime | Ne aktarıldı |
+|--------|------|--------------|
+| planner | fixer | Sözleşme + APP_BRIEF |
 
 ## Koşan ajanlar
 
@@ -99,7 +124,9 @@ There are at most **2 rounds** per run: the parallel build, then one repair.
 
 <Verifier ve reviewer sonuçlarını birleştiren 2-4 cümle.>
 
-## Kullanıcıdan beklenen kararlar
+## Kullanıcı kararları
 
-- <örn. commit atılsın mı, nit'ler düzeltilsin mi>
+| Zaman | Soru | Karar |
+|-------|------|-------|
+| <hangi aşamadan sonra> | <soru> | <bekliyor / kullanıcının cevabı> |
 ```
